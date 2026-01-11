@@ -1,16 +1,16 @@
 package dev.thecozycuppa.controller
 
+import dev.thecozycuppa.dto.PageResponseDto
 import dev.thecozycuppa.dto.PostDetailDto
-import dev.thecozycuppa.dto.PostSummaryDto
 import dev.thecozycuppa.entity.PostStatus
 import dev.thecozycuppa.mapper.toDetailDto
 import dev.thecozycuppa.mapper.toSummaryDto
 import dev.thecozycuppa.repository.PostRepository
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/posts")
@@ -19,10 +19,31 @@ class PostController(
 ) {
 
     @GetMapping
-    fun getPublishedPosts(): List<PostSummaryDto> =
-        postRepository
-            .findAllByStatusOrderByPublishedAtDesc(PostStatus.PUBLISHED)
-            .map { it.toSummaryDto() }
+    fun getPublishedPosts(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): PageResponseDto<dev.thecozycuppa.dto.PostSummaryDto> {
+
+        val safeSize = size.coerceIn(1, 50)
+
+        val pageable: Pageable = PageRequest.of(
+            page.coerceAtLeast(0),
+            safeSize,
+            Sort.by(Sort.Direction.DESC, "publishedAt")
+        )
+
+        val result = postRepository.findAllByStatusOrderByPublishedAtDesc(PostStatus.PUBLISHED, pageable)
+
+        return PageResponseDto(
+            items = result.content.map { it.toSummaryDto() },
+            page = result.number,
+            size = result.size,
+            totalItems = result.totalElements,
+            totalPages = result.totalPages,
+            hasNext = result.hasNext()
+        )
+    }
+
 
     @GetMapping("/{slug}")
     fun getPostBySlug(@PathVariable slug: String): ResponseEntity<PostDetailDto> {

@@ -8,6 +8,9 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.util.UUID
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.repository.EntityGraph
 
 @Repository
 interface PostRepository : JpaRepository<PostEntity, UUID> {
@@ -33,4 +36,7 @@ interface PostRepository : JpaRepository<PostEntity, UUID> {
         status: PostStatus,
         name: String
     ): List<PostEntity>
+
+    @EntityGraph(attributePaths = ["tags"])
+    fun findAllByStatusOrderByPublishedAtDesc(status: dev.thecozycuppa.entity.PostStatus, pageable: Pageable): Page<dev.thecozycuppa.entity.PostEntity>
 }
